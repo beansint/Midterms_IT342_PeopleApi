@@ -1,4 +1,4 @@
-package cit.edu.pacana_midterms_sia.GoogleContacts;
+package cit.edu.pacana_midterms_sia.Contact;
 
 import com.google.api.services.people.v1.PeopleService;
 import com.google.api.services.people.v1.model.Person;
