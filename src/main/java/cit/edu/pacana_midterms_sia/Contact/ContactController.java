@@ -40,21 +40,31 @@ public class ContactController {
             return ResponseEntity.internalServerError().build();
         }
     }
-    
-    @PutMapping("/{resourceName}")
+
+    @PutMapping("/{resourceName:.+}")
     public ResponseEntity<Contact> updateContact(
             @RequestHeader("Authorization") String accessToken,
             @PathVariable String resourceName,
             @RequestBody Contact contact) {
         try {
-            Contact updatedContact = contactService.updateContact(accessToken, resourceName, contact);
+            // Always add 'people/' prefix if it's not already there
+            String fullResourceName = resourceName;
+            if (!fullResourceName.startsWith("people/")) {
+                fullResourceName = "people/" + resourceName;
+            }
+
+            System.out.println("Updating contact with resource name: " + fullResourceName);
+            Contact updatedContact = contactService.updateContact(accessToken, fullResourceName, contact);
             return ResponseEntity.ok(updatedContact);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            System.err.println("Error updating contact: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
         }
     }
-    
-    @DeleteMapping("/{resourceName}")
+
+    @DeleteMapping("/{resourceName:.+}")
     public ResponseEntity<Void> deleteContact(
             @RequestHeader("Authorization") String accessToken,
             @PathVariable String resourceName) {

@@ -65,12 +65,18 @@
                                     <i class="fas fa-ellipsis-v"></i>
                                 </button>
                                 <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="#" th:onclick="'editContact(\'' + ${contact.resourceName} + '\')'">
-                                        <i class="fas fa-edit me-2"></i>Edit
-                                    </a></li>
-                                    <li><a class="dropdown-item text-danger" href="#" th:onclick="'deleteContact(\'' + ${contact.resourceName} + '\')'">
-                                        <i class="fas fa-trash me-2"></i>Delete
-                                    </a></li>
+                                    <li>
+                                        <button class="dropdown-item edit-contact" type="button"
+                                                th:attr="data-resource-name=${contact.resourceName}">
+                                            <i class="fas fa-edit me-2"></i>Edit
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item text-danger delete-contact" type="button"
+                                                th:data-resource-name="${contact.resourceName}">
+                                            <i class="fas fa-trash me-2"></i>Delete
+                                        </button>
+                                    </li>
                                 </ul>
                             </div>
                         </div>
@@ -88,7 +94,7 @@
         </div>
 
         <!-- Add Contact Button -->
-        <button class="btn btn-primary btn-floating" data-bs-toggle="modal" data-bs-target="#addContactModal">
+        <button class="btn btn-primary btn-floating" id="addContactBtn">
             <i class="fas fa-plus"></i>
         </button>
     </div>
@@ -105,8 +111,12 @@
                     <form id="contactForm">
                         <input type="hidden" id="resourceName">
                         <div class="mb-3">
-                            <label class="form-label">Name</label>
-                            <input type="text" class="form-control" id="displayName" required>
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="firstName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="lastName" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Email</label>
@@ -128,7 +138,12 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        sessionStorage.setItem('access_token', /*[[${accessToken}]]*/ '');
+        /*]]>*/
+    </script>
+    <script th:inline="javascript">
         // Initialize modal
         const contactModal = new bootstrap.Modal(document.getElementById('contactModal'));
         
@@ -145,68 +160,215 @@
             });
         });
 
-        // Add new contact
-        function showAddModal() {
+        // Add Contact Button
+        document.getElementById('addContactBtn').addEventListener('click', function() {
             document.getElementById('modalTitle').textContent = 'Add New Contact';
             document.getElementById('contactForm').reset();
             document.getElementById('resourceName').value = '';
             contactModal.show();
-        }
+        });
 
-        // Edit contact
-        function editContact(resourceName) {
-            document.getElementById('modalTitle').textContent = 'Edit Contact';
-            // Fetch contact details and populate form
-            fetch(`/api/contacts/${resourceName}`)
-                .then(response => response.json())
-                .then(contact => {
-                    document.getElementById('resourceName').value = contact.resourceName;
-                    document.getElementById('displayName').value = contact.displayName;
-                    document.getElementById('email').value = contact.email;
-                    document.getElementById('phoneNumber').value = contact.phoneNumber;
-                    contactModal.show();
+        // Edit Contact Buttons
+        document.querySelectorAll('.edit-contact').forEach(button => {
+            button.addEventListener('click', function() {
+                const resourceName = this.getAttribute('data-resource-name');
+                const card = this.closest('.card');
+
+                console.log('Opening edit modal for contact:', { resourceName: resourceName });
+
+                // Get the full display name from the card and trim it.
+                const displayName = card.querySelector('.card-title').textContent.trim();
+                const email = card.querySelector('.fa-envelope').nextElementSibling.textContent.trim();
+                const phoneNumber = card.querySelector('.fa-phone').nextElementSibling.textContent.trim();
+
+                console.log('Retrieved contact data:', {
+                    displayName: displayName,
+                    email: email,
+                    phoneNumber: phoneNumber
                 });
-        }
 
-        // Save contact
+                // Split the display name into first and last names.
+                const names = displayName.split(' ');
+                const firstName = names[0] || '';
+                const lastName = names.length > 1 ? names.slice(1).join(' ') : '';
+
+                // Set modal values for editing using the new fields.
+                document.getElementById('modalTitle').textContent = 'Edit Contact';
+                document.getElementById('resourceName').value = resourceName;
+                document.getElementById('firstName').value = firstName;
+                document.getElementById('lastName').value = lastName;
+                document.getElementById('email').value = email;
+                document.getElementById('phoneNumber').value = phoneNumber;
+
+                contactModal.show();
+            });
+        });
+
+
+
+        // Delete Contact Buttons
+        document.querySelectorAll('.delete-contact').forEach(button => {
+            button.addEventListener('click', function() {
+                const resourceName = this.getAttribute('data-resource-name');
+                console.log('Attempting to delete contact:', {
+                    resourceName: resourceName
+                });
+
+                if (confirm('Are you sure you want to delete this contact?')) {
+                    console.log('Delete confirmed, making API request');
+                    fetch(`/api/contacts/${resourceName}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': sessionStorage.getItem('access_token')
+                        }
+                    })
+                    .then(response => {
+                        console.log('Delete response:', {
+                            status: response.status,
+                            ok: response.ok
+                        });
+                        if (response.ok) {
+                            console.log('Contact deleted successfully');
+                            location.reload();
+                        } else {
+                            throw new Error(`Failed to delete contact: ${response.status}`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting contact:', {
+                            error: error,
+                            message: error.message
+                        });
+                        alert(`Failed to delete contact: ${error.message}`);
+                    });
+                } else {
+                    console.log('Delete cancelled by user');
+                }
+            });
+        });
+
+        // Save Contact
         document.getElementById('saveContact').addEventListener('click', function() {
             const resourceName = document.getElementById('resourceName').value;
-            const contact = {
-                displayName: document.getElementById('displayName').value,
+            const newContact = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
                 email: document.getElementById('email').value,
                 phoneNumber: document.getElementById('phoneNumber').value
             };
 
-            const url = resourceName ? `/api/contacts/${resourceName}` : '/api/contacts';
-            const method = resourceName ? 'PUT' : 'POST';
+            // For edit mode, compare the full name (first + last) with the existing display name.
+            if (resourceName) {
+                const fullName = newContact.firstName + " " + newContact.lastName;
+                const card = document.querySelector(`[data-resource-name="${resourceName}"]`).closest('.card');
+                const currentFullName = card.querySelector('.card-title').textContent;
+                const currentContact = {
+                    displayName: currentFullName,
+                    email: card.querySelector('.fa-envelope').nextElementSibling.textContent.trim(),
+                    phoneNumber: card.querySelector('.fa-phone').nextElementSibling.textContent.trim()
+                };
+
+                console.log('Comparing contacts:', {
+                    current: currentContact,
+                    new: { displayName: fullName, email: newContact.email, phoneNumber: newContact.phoneNumber }
+                });
+
+                if (currentFullName === fullName &&
+                    currentContact.email === newContact.email &&
+                    currentContact.phoneNumber === newContact.phoneNumber) {
+                    console.log('No changes detected, canceling update');
+                    alert('No changes detected.');
+                    contactModal.hide();
+                    return;
+                }
+            }
+
+            // Remove 'people/' prefix from resourceName if it exists
+            const cleanResourceName = resourceName ? resourceName.replace('people/', '') : '';
+
+            let url, method;
+            if (cleanResourceName) {
+                url = `/api/contacts/${cleanResourceName}`;
+                method = 'PUT';
+                console.log('Edit mode - using cleaned resource name:', {
+                    original: resourceName,
+                    cleaned: cleanResourceName,
+                    url: url
+                });
+            } else {
+                url = '/api/contacts';
+                method = 'POST';
+                console.log('Create mode - using base URL:', {
+                    url: url
+                });
+            }
+
+            // Include the cleaned resource name in the request body
+            if (cleanResourceName) {
+                newContact.resourceName = cleanResourceName;
+            }
+
+            console.log('Making API request:', {
+                url: url,
+                method: method,
+                body: newContact
+            });
 
             fetch(url, {
                 method: method,
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': sessionStorage.getItem('access_token')
                 },
-                body: JSON.stringify(contact)
+                body: JSON.stringify(newContact)
             })
-            .then(response => {
-                if (response.ok) {
-                    location.reload();
-                }
-            });
+                .then(async response => {
+                    console.log('Received response:', {
+                        status: response.status,
+                        ok: response.ok,
+                        url: response.url
+                    });
+
+                    // Get the raw response text for debugging
+                    const responseText = await response.text();
+                    console.log('Raw response:', responseText);
+
+                    if (response.ok) {
+                        console.log('Contact saved successfully');
+                        location.reload();
+                    } else {
+                        let errorMessage = `Status: ${response.status}`;
+                        try {
+                            const errorObj = JSON.parse(responseText);
+                            errorMessage += ` - ${errorObj.message || 'Unknown error'}`;
+                        } catch (e) {
+                            errorMessage += ` - ${responseText}`;
+                        }
+                        throw new Error(`Failed to save contact: ${errorMessage}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error saving contact:', {
+                        error: error,
+                        message: error.message,
+                        stack: error.stack
+                    });
+                    alert(`Failed to save contact: ${error.message}`);
+                });
         });
 
-        // Delete contact
-        function deleteContact(resourceName) {
-            if (confirm('Are you sure you want to delete this contact?')) {
-                fetch(`/api/contacts/${resourceName}`, {
-                    method: 'DELETE'
-                })
-                .then(response => {
-                    if (response.ok) {
-                        location.reload();
-                    }
-                });
-            }
-        }
+
+        // Add this at the beginning of your script
+        console.log('Page initialized. Checking for contacts...');
+        document.querySelectorAll('.card').forEach((card, index) => {
+            const resourceName = card.querySelector('[data-resource-name]')?.getAttribute('data-resource-name');
+            console.log(`Contact ${index + 1}:`, {
+                resourceName: resourceName,
+                displayName: card.querySelector('.card-title')?.textContent,
+                hasEmail: !!card.querySelector('.fa-envelope'),
+                hasPhone: !!card.querySelector('.fa-phone')
+            });
+        });
     </script>
 </body>
 </html> 

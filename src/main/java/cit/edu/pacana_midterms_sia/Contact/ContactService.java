@@ -6,6 +6,7 @@ import com.google.api.services.people.v1.model.ListConnectionsResponse;
 import com.google.api.services.people.v1.model.Name;
 import com.google.api.services.people.v1.model.EmailAddress;
 import com.google.api.services.people.v1.model.PhoneNumber;
+import com.google.api.services.people.v1.model.FieldMetadata;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,7 @@ public class ContactService {
             ListConnectionsResponse response = peopleService.people().connections()
                     .list("people/me")
                     .setPageSize(100)
+                    .setPersonFields("names,emailAddresses,phoneNumbers")
                     .setAccessToken(accessToken)
                     .execute();
             return response.getConnections().stream()
@@ -65,33 +67,45 @@ public class ContactService {
                 "Failed to create contact: " + e.getMessage());
         }
     }
-    
+
     public Contact updateContact(String accessToken, String resourceName, Contact contact) {
         try {
+            // Fetch existing contact to get ETag.
+            Person existingPerson = peopleService.people().get(resourceName)
+                    .setPersonFields("names,emailAddresses,phoneNumbers")
+                    .setAccessToken(accessToken)
+                    .execute();
+
             Person person = new Person();
-            
+            person.setEtag(existingPerson.getEtag());
+
+            // Construct the full name from firstName and lastName.
+            String fullName = contact.getFirstName() + " " + contact.getLastName();
             Name name = new Name();
-            name.setDisplayName(contact.getDisplayName());
+            name.setDisplayName(fullName);
             person.setNames(List.of(name));
-            
+
             EmailAddress email = new EmailAddress();
             email.setValue(contact.getEmail());
             person.setEmailAddresses(List.of(email));
-            
+
             PhoneNumber phone = new PhoneNumber();
             phone.setValue(contact.getPhoneNumber());
             person.setPhoneNumbers(List.of(phone));
-            
+
             Person updatedPerson = peopleService.people().updateContact(resourceName, person)
                     .setAccessToken(accessToken)
+                    .setUpdatePersonFields("names,emailAddresses,phoneNumbers")
                     .execute();
+
             return Contact.fromPerson(updatedPerson);
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, 
-                "Failed to update contact: " + e.getMessage());
+            e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to update contact: " + e.getMessage());
         }
     }
-    
+
     public void deleteContact(String accessToken, String resourceName) {
         try {
             peopleService.people().deleteContact(resourceName)
