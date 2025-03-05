@@ -46,21 +46,32 @@
             try {
                 Person person = new Person();
 
-                // Set the name fields using givenName and familyName.
+                // Set name
                 Name name = new Name();
                 name.setGivenName(contact.getFirstName());
                 name.setFamilyName(contact.getLastName());
-                // Optionally, set displayName as a combination.
-                name.setDisplayName(contact.getFirstName() + " " + contact.getLastName());
+                name.setDisplayName(contact.getDisplayName());
                 person.setNames(List.of(name));
 
-                EmailAddress email = new EmailAddress();
-                email.setValue(contact.getEmail());
-                person.setEmailAddresses(List.of(email));
+                // Set emails
+                List<EmailAddress> emailAddresses = contact.getEmails().stream()
+                    .map(email -> {
+                        EmailAddress emailAddress = new EmailAddress();
+                        emailAddress.setValue(email);
+                        return emailAddress;
+                    })
+                    .collect(Collectors.toList());
+                person.setEmailAddresses(emailAddresses);
 
-                PhoneNumber phone = new PhoneNumber();
-                phone.setValue(contact.getPhoneNumber());
-                person.setPhoneNumbers(List.of(phone));
+                // Set phone
+                List<PhoneNumber> phoneNumbers = contact.getPhoneNumbers().stream()
+                    .map(phone -> {
+                        PhoneNumber phoneNumber = new PhoneNumber();
+                        phoneNumber.setValue(phone);
+                        return phoneNumber;
+                    })
+                    .collect(Collectors.toList());
+                person.setPhoneNumbers(phoneNumbers);
 
                 Person createdPerson = peopleService.people().createContact(person)
                         .setAccessToken(accessToken)
@@ -74,7 +85,7 @@
 
         public Contact updateContact(String accessToken, String resourceName, Contact contact) {
             try {
-                // Fetch existing contact to get ETag.
+                // Fetch existing contact to get ETag
                 Person existingPerson = peopleService.people().get(resourceName)
                         .setPersonFields("names,emailAddresses,phoneNumbers")
                         .setAccessToken(accessToken)
@@ -83,32 +94,42 @@
                 Person person = new Person();
                 person.setEtag(existingPerson.getEtag());
 
-                // Set the name fields using givenName and familyName.
+                // Set name
                 Name name = new Name();
                 name.setGivenName(contact.getFirstName());
                 name.setFamilyName(contact.getLastName());
-                // Optionally, set displayName as a combination.
-                name.setDisplayName(contact.getFirstName() + " " + contact.getLastName());
+                name.setDisplayName(contact.getDisplayName());
                 person.setNames(List.of(name));
 
-                EmailAddress email = new EmailAddress();
-                email.setValue(contact.getEmail());
-                person.setEmailAddresses(List.of(email));
+                // Set emails
+                List<EmailAddress> emailAddresses = contact.getEmails().stream()
+                    .map(email -> {
+                        EmailAddress emailAddress = new EmailAddress();
+                        emailAddress.setValue(email);
+                        return emailAddress;
+                    })
+                    .collect(Collectors.toList());
+                person.setEmailAddresses(emailAddresses);
 
-                PhoneNumber phone = new PhoneNumber();
-                phone.setValue(contact.getPhoneNumber());
-                person.setPhoneNumbers(List.of(phone));
+                // Set phone
+                List<PhoneNumber> phoneNumbers = contact.getPhoneNumbers().stream()
+                    .map(phone -> {
+                        PhoneNumber phoneNumber = new PhoneNumber();
+                        phoneNumber.setValue(phone);
+                        return phoneNumber;
+                    })
+                    .collect(Collectors.toList());
+                person.setPhoneNumbers(phoneNumbers);
 
                 Person updatedPerson = peopleService.people().updateContact(resourceName, person)
-                        .setAccessToken(accessToken)
                         .setUpdatePersonFields("names,emailAddresses,phoneNumbers")
+                        .setAccessToken(accessToken)
                         .execute();
 
                 return Contact.fromPerson(updatedPerson);
             } catch (Exception e) {
-                e.printStackTrace();
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Failed to update contact: " + e.getMessage());
+                    "Failed to update contact: " + e.getMessage());
             }
         }
 

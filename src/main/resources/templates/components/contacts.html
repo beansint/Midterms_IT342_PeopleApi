@@ -1,143 +1,200 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head>
-    <title>Google Contacts</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .contact-card {
-            transition: transform 0.2s;
-        }
-        .contact-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        .search-box {
-            border-radius: 20px;
-            padding-left: 20px;
-        }
-        .btn-floating {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            font-size: 24px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contacts Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="/css/contacts.css" rel="stylesheet">
 </head>
-<body class="bg-light">
+<body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg">
         <div class="container">
             <a class="navbar-brand" href="#">
-                <i class="fas fa-address-book me-2"></i>
-                Google Contacts
+                <i class="fas fa-address-book"></i>
+                Contacts Hub
             </a>
             <div class="d-flex">
                 <form th:action="@{/logout}" method="post">
-                    <button class="btn btn-outline-light" type="submit">Logout</button>
+                    <button class="btn logout-btn text-white" type="submit">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </button>
                 </form>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <div class="container py-4">
+    <div class="container">
         <!-- Search Bar -->
-        <div class="row mb-4">
-            <div class="col-md-6 mx-auto">
-                <input type="text" class="form-control search-box" placeholder="Search contacts..." id="searchInput">
+        <div class="row mt-4 mb-4">
+            <div class="col-md-8 mx-auto">
+                <div class="search-container">
+                    <input type="text" class="form-control search-box" placeholder="Search contacts by name or email..." id="searchInput">
+                </div>
             </div>
         </div>
 
         <!-- Contacts Grid -->
-        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="contactsGrid">
-            <div class="col" th:each="contact : ${contacts}">
-                <div class="card h-100 contact-card">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <h5 class="card-title" th:text="${contact.displayName}">Contact Name</h5>
-                            <div class="dropdown">
-                                <button class="btn btn-link" type="button" data-bs-toggle="dropdown">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <button class="dropdown-item edit-contact" type="button"
-                                                th:attr="data-resource-name=${contact.resourceName}">
-                                            <i class="fas fa-edit me-2"></i>Edit
-                                        </button>
-                                    </li>
-                                    <li>
-                                        <button class="dropdown-item text-danger delete-contact" type="button"
-                                                th:data-resource-name="${contact.resourceName}">
-                                            <i class="fas fa-trash me-2"></i>Delete
-                                        </button>
-                                    </li>
-                                </ul>
+        <div class="contacts-container">
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="contactsGrid">
+                <!-- Empty state if no contacts -->
+                <div class="col-12 no-contacts" th:if="${#lists.isEmpty(contacts)}">
+                    <div class="no-contacts-icon">
+                        <i class="far fa-address-book"></i>
+                    </div>
+                    <h3 class="no-contacts-text">No contacts found</h3>
+                    <p class="mb-4">Get started by adding your first contact</p>
+                    <button class="btn no-contacts-btn" id="emptyStateAddBtn">
+                        <i class="fas fa-plus me-2"></i>Add Contact
+                    </button>
+                </div>
+                
+                <!-- Contact Cards -->
+                <div class="col contact-item" th:each="contact : ${contacts}">
+                    <div class="card contact-card">
+                        <div class="contact-header">
+                            <div class="contact-avatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <h5 class="contact-name" th:text="${contact.displayName}">Contact Name</h5>
+                            <div class="contact-actions">
+                                <div class="dropdown">
+                                    <button class="action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                            <button class="dropdown-item edit edit-contact" type="button"
+                                                    th:attr="data-resource-name=${contact.resourceName}">
+                                                <i class="fas fa-edit me-2"></i>Edit
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <button class="dropdown-item delete delete-contact" type="button"
+                                                    th:attr="data-resource-name=${contact.resourceName}">
+                                                <i class="fas fa-trash me-2"></i>Delete
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
-                        <p class="card-text mb-1">
-                            <i class="fas fa-envelope me-2 text-muted"></i>
-                            <span th:text="${contact.email}">email@example.com</span>
-                        </p>
-                        <p class="card-text">
-                            <i class="fas fa-phone me-2 text-muted"></i>
-                            <span th:text="${contact.phoneNumber}">+1234567890</span>
-                        </p>
+                        <div class="contact-body">
+                            <div class="contact-info emails-container">
+                                <div class="email-list">
+                                    <span th:each="email : ${contact.emails}" class="email-item">
+                                        <i class="fas fa-envelope me-1 text-primary"></i>
+                                        <span th:text="${email}">email@example.com</span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="contact-info phones-container">
+                                <div class="phone-list">
+                                    <span th:each="phone : ${contact.phoneNumbers}" class="phone-item">
+                                        <i class="fas fa-phone me-1 text-primary"></i>
+                                        <span th:text="${phone}">+1234567890</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination-container">
+                <div class="pagination-controls">
+                    <button class="btn" id="prevPage" disabled>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span class="pagination-info">
+                        <span id="startIndex">1</span>-<span id="endIndex">6</span> of <span id="totalContacts">0</span>
+                    </span>
+                    <button class="btn" id="nextPage" disabled>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
                 </div>
             </div>
         </div>
 
         <!-- Add Contact Button -->
-        <button class="btn btn-primary btn-floating" id="addContactBtn">
+        <button class="add-btn" id="addContactBtn" aria-label="Add new contact">
             <i class="fas fa-plus"></i>
         </button>
     </div>
 
     <!-- Add/Edit Contact Modal -->
-    <div class="modal fade" id="contactModal" tabindex="-1">
-        <div class="modal-dialog">
+    <div class="modal fade" id="contactModal" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalTitle">Add New Contact</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="contactForm">
                         <input type="hidden" id="resourceName">
                         <div class="mb-3">
-                            <label class="form-label">First Name</label>
+                            <label for="firstName" class="form-label">First Name</label>
                             <input type="text" class="form-control" id="firstName" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Last Name</label>
+                            <label for="lastName" class="form-label">Last Name</label>
                             <input type="text" class="form-control" id="lastName" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" required>
+                            <label class="form-label">Emails</label>
+                            <div id="emailsContainer">
+                                <div class="input-group mb-2">
+                                    <input type="email" class="form-control email-input" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$">
+                                    <button type="button" class="btn btn-outline-danger remove-email" style="display: none;">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="email-requirements">
+                                <p class="mb-2">Suggested email format:</p>
+                                <ul id="emailRequirementsList">
+                                    <li data-requirement="at">Contains @ symbol</li>
+                                    <li data-requirement="domain">Contains a domain (e.g., .com, .org)</li>
+                                </ul>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="addEmailBtn">
+                                <i class="fas fa-plus me-1"></i>Add Another Email
+                            </button>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Phone</label>
-                            <input type="tel" class="form-control" id="phoneNumber" required>
+                            <label class="form-label">Phone Numbers</label>
+                            <div id="phonesContainer">
+                                <div class="input-group mb-2">
+                                    <input type="tel" class="form-control phone-input" required>
+                                    <button type="button" class="btn btn-outline-danger remove-phone" style="display: none;">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="addPhoneBtn">
+                                <i class="fas fa-plus me-1"></i>Add Another Phone
+                            </button>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="saveContact">Save Contact</button>
+                    <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-save" id="saveContact">Save Contact</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script th:inline="javascript">
         /*<![CDATA[*/
         sessionStorage.setItem('access_token', /*[[${accessToken}]]*/ '');
@@ -153,10 +210,10 @@
             const cards = document.querySelectorAll('.contact-card');
             
             cards.forEach(card => {
-                const name = card.querySelector('.card-title').textContent.toLowerCase();
-                const email = card.querySelector('.card-text span').textContent.toLowerCase();
+                const name = card.querySelector('.contact-name').textContent.toLowerCase();
+                const emails = Array.from(card.querySelectorAll('.email-item')).map(span => span.textContent.toLowerCase());
                 card.closest('.col').style.display = 
-                    name.includes(searchText) || email.includes(searchText) ? '' : 'none';
+                    name.includes(searchText) || emails.some(email => email.includes(searchText)) ? '' : 'none';
             });
         });
 
@@ -166,7 +223,131 @@
             document.getElementById('contactForm').reset();
             document.getElementById('resourceName').value = '';
             contactModal.show();
+    
+            emailsContainer.innerHTML = '';
+            addEmailField();
+            phonesContainer.innerHTML = '';
+            addPhoneField();
         });
+        
+        // Empty state add button (if present)
+        const emptyStateAddBtn = document.getElementById('emptyStateAddBtn');
+        if (emptyStateAddBtn) {
+            emptyStateAddBtn.addEventListener('click', function() {
+                emailsContainer.innerHTML = '';
+                addEmailField();
+                phonesContainer.innerHTML = '';
+                addPhoneField();
+            });
+        }
+
+        // Email field management
+        const emailsContainer = document.getElementById('emailsContainer');
+        const addEmailBtn = document.getElementById('addEmailBtn');
+
+        // Email validation function
+        function validateEmail(email) {
+            const requirements = {
+                at: email.includes('@'),
+                domain: /\.[a-z]{2,}$/.test(email),
+                spaces: !/\s/.test(email)
+            };
+            
+            // Update requirement list UI
+            Object.entries(requirements).forEach(([requirement, isValid]) => {
+                const li = document.querySelector(`#emailRequirementsList li[data-requirement="${requirement}"]`);
+                if (li) {
+                    li.classList.toggle('valid', isValid);
+                    li.classList.toggle('invalid', !isValid);
+                }
+            });
+            
+            return Object.values(requirements).every(Boolean);
+        }
+
+        // Add input validation to email fields
+        function addEmailValidationListeners(emailInput) {
+            emailInput.addEventListener('input', function() {
+                const isValid = validateEmail(this.value);
+                this.classList.toggle('is-valid', isValid);
+                this.classList.toggle('is-invalid', !isValid && this.value !== '');
+            });
+        }
+
+        // Modified addEmailField function
+        function addEmailField(value = '') {
+            const emailGroup = document.createElement('div');
+            emailGroup.className = 'input-group mb-2';
+            emailGroup.innerHTML = `
+                <input type="email" class="form-control email-input" value="${value}" required 
+                       pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$">
+                <button type="button" class="btn btn-outline-danger remove-email">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            emailsContainer.appendChild(emailGroup);
+            
+            const emailInput = emailGroup.querySelector('.email-input');
+            addEmailValidationListeners(emailInput);
+            
+            // Show remove buttons if there's more than one email field
+            const removeButtons = emailsContainer.querySelectorAll('.remove-email');
+            removeButtons.forEach(btn => {
+                btn.style.display = removeButtons.length > 1 ? 'block' : 'none';
+            });
+
+            // Add remove event listener
+            emailGroup.querySelector('.remove-email').addEventListener('click', function() {
+                emailGroup.remove();
+                // Update remove buttons visibility
+                const remainingButtons = emailsContainer.querySelectorAll('.remove-email');
+                remainingButtons.forEach(btn => {
+                    btn.style.display = remainingButtons.length > 1 ? 'block' : 'none';
+                });
+            });
+
+            if (value) {
+                validateEmail(value);
+            }
+        }
+
+        addEmailBtn.addEventListener('click', () => addEmailField());
+
+        // Phone field management
+        const phonesContainer = document.getElementById('phonesContainer');
+        const addPhoneBtn = document.getElementById('addPhoneBtn');
+
+        function addPhoneField(value = '') {
+            const phoneGroup = document.createElement('div');
+            phoneGroup.className = 'input-group mb-2';
+            phoneGroup.innerHTML = `
+                <input type="tel" class="form-control phone-input" value="${value}" required>
+                <button type="button" class="btn btn-outline-danger remove-phone">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+
+            phonesContainer.appendChild(phoneGroup);
+            
+            // Show remove buttons if there's more than one phone field
+            const removeButtons = phonesContainer.querySelectorAll('.remove-phone');
+            removeButtons.forEach(btn => {
+                btn.style.display = removeButtons.length > 1 ? 'block' : 'none';
+            });
+
+            // Add remove event listener
+            phoneGroup.querySelector('.remove-phone').addEventListener('click', function() {
+                phoneGroup.remove();
+                // Update remove buttons visibility
+                const remainingButtons = phonesContainer.querySelectorAll('.remove-phone');
+                remainingButtons.forEach(btn => {
+                    btn.style.display = remainingButtons.length > 1 ? 'block' : 'none';
+                });
+            });
+        }
+
+        addPhoneBtn.addEventListener('click', () => addPhoneField());
 
         // Edit Contact Buttons
         document.querySelectorAll('.edit-contact').forEach(button => {
@@ -176,29 +357,34 @@
 
                 console.log('Opening edit modal for contact:', { resourceName: resourceName });
 
-                // Get the full display name from the card and trim it.
-                const displayName = card.querySelector('.card-title').textContent.trim();
-                const email = card.querySelector('.fa-envelope').nextElementSibling.textContent.trim();
-                const phoneNumber = card.querySelector('.fa-phone').nextElementSibling.textContent.trim();
+                const displayName = card.querySelector('.contact-name').textContent.trim();
+                const emails = Array.from(card.querySelectorAll('.email-item')).map(span => span.textContent.trim());
+                const phoneNumbers = Array.from(card.querySelectorAll('.phone-item')).map(span => span.textContent.trim());
 
                 console.log('Retrieved contact data:', {
                     displayName: displayName,
-                    email: email,
-                    phoneNumber: phoneNumber
+                    emails: emails,
+                    phoneNumbers: phoneNumbers
                 });
 
-                // Split the display name into first and last names.
                 const names = displayName.split(' ');
                 const firstName = names[0] || '';
                 const lastName = names.length > 1 ? names.slice(1).join(' ') : '';
 
-                // Set modal values for editing using the new fields.
+                // Clear existing email and phone fields
+                emailsContainer.innerHTML = '';
+                phonesContainer.innerHTML = '';
+                
+                // Add email fields for each email
+                emails.forEach(email => addEmailField(email));
+
+                // Add phone fields for each phone
+                phoneNumbers.forEach(phone => addPhoneField(phone));
+
                 document.getElementById('modalTitle').textContent = 'Edit Contact';
                 document.getElementById('resourceName').value = resourceName;
                 document.getElementById('firstName').value = firstName;
                 document.getElementById('lastName').value = lastName;
-                document.getElementById('email').value = email;
-                document.getElementById('phoneNumber').value = phoneNumber;
 
                 contactModal.show();
             });
@@ -243,35 +429,61 @@
             });
         });
 
-        // Save Contact
+        // Modified Save Contact
         document.getElementById('saveContact').addEventListener('click', function() {
+            // Validate all email fields
+            const emailInputs = document.querySelectorAll('.email-input');
+            let hasInvalidFormat = false;
+            
+            emailInputs.forEach(input => {
+                const isValid = validateEmail(input.value);
+                input.classList.toggle('is-valid', isValid);
+                input.classList.toggle('is-invalid', !isValid && input.value !== '');
+                if (!isValid && input.value !== '') {
+                    hasInvalidFormat = true;
+                }
+            });
+
+            if (hasInvalidFormat) {
+                if (!confirm('Some emails do not follow the suggested format. Do you want to save anyway?')) {
+                    return;
+                }
+            }
+
             const resourceName = document.getElementById('resourceName').value;
+            const emails = Array.from(emailInputs)
+                .map(input => input.value)
+                .filter(email => email.trim() !== ''); // Only include non-empty emails
+            const phoneNumbers = Array.from(document.querySelectorAll('.phone-input')).map(input => input.value);
+            
             const newContact = {
                 firstName: document.getElementById('firstName').value,
-                lastName: document.getElementById('lastName').value,
-                email: document.getElementById('email').value,
-                phoneNumber: document.getElementById('phoneNumber').value
+                lastName: document.getElementById('lastName').value.trim() || '', // Use empty string if lastName is empty
+                emails: emails,
+                phoneNumbers: phoneNumbers
             };
 
-            // For edit mode, compare the full name (first + last) with the existing display name.
+            // For edit mode, compare with existing data
             if (resourceName) {
-                const fullName = newContact.firstName + " " + newContact.lastName;
+                const fullName = newContact.firstName + (newContact.lastName ? " " + newContact.lastName : "");
                 const card = document.querySelector(`[data-resource-name="${resourceName}"]`).closest('.card');
-                const currentFullName = card.querySelector('.card-title').textContent;
+                const currentFullName = card.querySelector('.contact-name').textContent;
+                const currentEmails = Array.from(card.querySelectorAll('.email-item')).map(span => span.textContent.trim());
+                const currentPhoneNumbers = Array.from(card.querySelectorAll('.phone-item')).map(span => span.textContent.trim());
                 const currentContact = {
                     displayName: currentFullName,
-                    email: card.querySelector('.fa-envelope').nextElementSibling.textContent.trim(),
-                    phoneNumber: card.querySelector('.fa-phone').nextElementSibling.textContent.trim()
+                    emails: currentEmails,
+                    phoneNumbers: currentPhoneNumbers
                 };
 
                 console.log('Comparing contacts:', {
                     current: currentContact,
-                    new: { displayName: fullName, email: newContact.email, phoneNumber: newContact.phoneNumber }
+                    new: { displayName: fullName, emails: newContact.emails, phoneNumbers: newContact.phoneNumbers }
                 });
 
                 if (currentFullName === fullName &&
-                    currentContact.email === newContact.email &&
-                    currentContact.phoneNumber === newContact.phoneNumber) {
+                    JSON.stringify(currentContact.emails.sort()) === JSON.stringify(newContact.emails.sort()) &&
+                    JSON.stringify(currentContact.phoneNumbers.sort()) === JSON.stringify(newContact.phoneNumbers.sort())) {
                     console.log('No changes detected, canceling update');
                     alert('No changes detected.');
                     contactModal.hide();
@@ -286,20 +498,11 @@
             if (cleanResourceName) {
                 url = `/api/contacts/${cleanResourceName}`;
                 method = 'PUT';
-                console.log('Edit mode - using cleaned resource name:', {
-                    original: resourceName,
-                    cleaned: cleanResourceName,
-                    url: url
-                });
             } else {
                 url = '/api/contacts';
                 method = 'POST';
-                console.log('Create mode - using base URL:', {
-                    url: url
-                });
             }
 
-            // Include the cleaned resource name in the request body
             if (cleanResourceName) {
                 newContact.resourceName = cleanResourceName;
             }
@@ -325,7 +528,6 @@
                         url: response.url
                     });
 
-                    // Get the raw response text for debugging
                     const responseText = await response.text();
                     console.log('Raw response:', responseText);
 
@@ -344,25 +546,103 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Error saving contact:', {
-                        error: error,
-                        message: error.message,
-                        stack: error.stack
-                    });
+                    console.error('Error saving contact:', error);
                     alert(`Failed to save contact: ${error.message}`);
                 });
         });
 
-        // Add this at the beginning of your script
+        // Page initialization logging
         console.log('Page initialized. Checking for contacts...');
-        document.querySelectorAll('.card').forEach((card, index) => {
+        document.querySelectorAll('.contact-card').forEach((card, index) => {
             const resourceName = card.querySelector('[data-resource-name]')?.getAttribute('data-resource-name');
             console.log(`Contact ${index + 1}:`, {
                 resourceName: resourceName,
-                displayName: card.querySelector('.card-title')?.textContent,
-                hasEmail: !!card.querySelector('.fa-envelope'),
-                hasPhone: !!card.querySelector('.fa-phone')
+                displayName: card.querySelector('.contact-name')?.textContent,
+                hasEmails: !!card.querySelectorAll('.email-item').length,
+                hasPhones: !!card.querySelectorAll('.phone-item').length
             });
+        });
+
+        // Pagination Configuration
+        const ITEMS_PER_PAGE = 9;
+        let currentPage = 1;
+        let filteredContacts = [];
+        
+        // Initialize pagination
+        function initializePagination() {
+            const contactItems = document.querySelectorAll('.contact-item');
+            filteredContacts = Array.from(contactItems);
+            updatePagination();
+            showCurrentPage();
+        }
+
+        // Update pagination controls and info
+        function updatePagination() {
+            const totalContacts = filteredContacts.length;
+            const totalPages = Math.ceil(totalContacts / ITEMS_PER_PAGE);
+            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+            const endIndex = Math.min(startIndex + ITEMS_PER_PAGE - 1, totalContacts);
+
+            // Update pagination info
+            document.getElementById('startIndex').textContent = totalContacts === 0 ? 0 : startIndex;
+            document.getElementById('endIndex').textContent = endIndex;
+            document.getElementById('totalContacts').textContent = totalContacts;
+
+            // Update button states
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
+        }
+
+        // Show current page
+        function showCurrentPage() {
+            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+            const endIndex = startIndex + ITEMS_PER_PAGE;
+
+            filteredContacts.forEach((item, index) => {
+                item.style.display = (index >= startIndex && index < endIndex) ? '' : 'none';
+            });
+
+            updatePagination();
+        }
+
+        // Pagination event listeners
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                showCurrentPage();
+            }
+        });
+
+        document.getElementById('nextPage').addEventListener('click', () => {
+            const totalPages = Math.ceil(filteredContacts.length / ITEMS_PER_PAGE);
+            if (currentPage < totalPages) {
+                currentPage++;
+                showCurrentPage();
+            }
+        });
+
+        // Update search functionality to work with pagination
+        document.getElementById('searchInput').addEventListener('keyup', function(e) {
+            const searchText = e.target.value.toLowerCase();
+            const allContacts = document.querySelectorAll('.contact-item');
+            
+            filteredContacts = Array.from(allContacts).filter(card => {
+                const name = card.querySelector('.contact-name').textContent.toLowerCase();
+                const emails = Array.from(card.querySelectorAll('.email-item')).map(span => span.textContent.toLowerCase());
+                return name.includes(searchText) || emails.some(email => email.includes(searchText));
+            });
+
+            currentPage = 1; // Reset to first page when searching
+            showCurrentPage();
+        });
+
+        // Initialize pagination when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initializePagination();
+            
+            // Calculate scrollbar width and set CSS variable
+            const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+            document.documentElement.style.setProperty('--scrollbar-width', `${scrollbarWidth}px`);
         });
     </script>
 </body>
