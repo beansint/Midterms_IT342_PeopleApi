@@ -1,10 +1,14 @@
 package cit.edu.pacana_midterms_sia.Contact;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @RestController
@@ -12,6 +16,7 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class ContactController {
     
+    private static final Logger logger = LoggerFactory.getLogger(ContactController.class);
     private final ContactService contactService;
     
     @Autowired
@@ -25,6 +30,7 @@ public class ContactController {
             List<Contact> contacts = contactService.getAllContacts(accessToken);
             return ResponseEntity.ok(contacts);
         } catch (Exception e) {
+            logger.error("Error fetching contacts", e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -37,6 +43,7 @@ public class ContactController {
             Contact createdContact = contactService.createContact(accessToken, contact);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdContact);
         } catch (Exception e) {
+            logger.error("Error creating contact", e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -53,12 +60,11 @@ public class ContactController {
                 fullResourceName = "people/" + resourceName;
             }
 
-            System.out.println("Updating contact with resource name: " + fullResourceName);
+            logger.debug("Updating contact with resource name: {}", fullResourceName);
             Contact updatedContact = contactService.updateContact(accessToken, fullResourceName, contact);
             return ResponseEntity.ok(updatedContact);
         } catch (Exception e) {
-            System.err.println("Error updating contact: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error updating contact: {}", resourceName, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(null);
         }
@@ -69,10 +75,23 @@ public class ContactController {
             @RequestHeader("Authorization") String accessToken,
             @PathVariable String resourceName) {
         try {
-            contactService.deleteContact(accessToken, resourceName);
+            // Decode the resource name
+            String decodedResourceName = URLDecoder.decode(resourceName, StandardCharsets.UTF_8).trim();
+            
+            // Ensure the resource name starts with "people/"
+            if (!decodedResourceName.startsWith("people/")) {
+                decodedResourceName = "people/" + decodedResourceName;
+            }
+            
+            logger.debug("Attempting to delete contact with resource name: {}", decodedResourceName);
+            
+            // Call the delete operation
+            contactService.deleteContact(accessToken, decodedResourceName);
+            logger.debug("Successfully deleted contact: {}", decodedResourceName);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            logger.error("Error deleting contact: {}", resourceName, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-} 
+}
