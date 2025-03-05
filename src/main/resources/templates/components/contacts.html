@@ -91,6 +91,9 @@
                                     <span th:each="email : ${contact.emails}" class="email-item">
                                         <i class="fas fa-envelope me-1 text-primary"></i>
                                         <span th:text="${email}">email@example.com</span>
+                                        <button class="copy-info-btn" onclick="copyText(this)" data-value="${email}">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
                                     </span>
                                 </div>
                             </div>
@@ -99,6 +102,9 @@
                                     <span th:each="phone : ${contact.phoneNumbers}" class="phone-item">
                                         <i class="fas fa-phone me-1 text-primary"></i>
                                         <span th:text="${phone}">+1234567890</span>
+                                        <button class="copy-info-btn" onclick="copyText(this)" data-value="${phone}">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
                                     </span>
                                 </div>
                             </div>
@@ -193,6 +199,24 @@
         </div>
     </div>
 
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content confirmation-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="confirmationTitle">Confirm Action</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="confirmationMessage" class="mb-0"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-confirm" id="confirmActionBtn">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script th:inline="javascript">
@@ -201,8 +225,9 @@
         /*]]>*/
     </script>
     <script th:inline="javascript">
-        // Initialize modal
+        // Initialize modals
         const contactModal = new bootstrap.Modal(document.getElementById('contactModal'));
+        const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
         
         // Search functionality
         document.getElementById('searchInput').addEventListener('keyup', function(e) {
@@ -253,24 +278,25 @@
                 spaces: !/\s/.test(email)
             };
             
-            // Update requirement list UI
+            // Update requirement list UI without adding invalid class
             Object.entries(requirements).forEach(([requirement, isValid]) => {
                 const li = document.querySelector(`#emailRequirementsList li[data-requirement="${requirement}"]`);
                 if (li) {
                     li.classList.toggle('valid', isValid);
-                    li.classList.toggle('invalid', !isValid);
+                    li.classList.remove('invalid'); // Remove invalid class
                 }
             });
             
-            return Object.values(requirements).every(Boolean);
+            return true; // Always return true since it's just a suggestion
         }
 
         // Add input validation to email fields
         function addEmailValidationListeners(emailInput) {
             emailInput.addEventListener('input', function() {
-                const isValid = validateEmail(this.value);
-                this.classList.toggle('is-valid', isValid);
-                this.classList.toggle('is-invalid', !isValid && this.value !== '');
+                validateEmail(this.value);
+                // Remove validation classes from input
+                this.classList.remove('is-valid');
+                this.classList.remove('is-invalid');
             });
         }
 
@@ -279,8 +305,7 @@
             const emailGroup = document.createElement('div');
             emailGroup.className = 'input-group mb-2';
             emailGroup.innerHTML = `
-                <input type="email" class="form-control email-input" value="${value}" required 
-                       pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$">
+                <input type="email" class="form-control email-input" value="${value}">
                 <button type="button" class="btn btn-outline-danger remove-email">
                     <i class="fas fa-times"></i>
                 </button>
@@ -390,72 +415,91 @@
             });
         });
 
+        // Confirmation modal helper function
+        function showConfirmation(title, message, onConfirm, type = 'default') {
+            const modal = document.querySelector('#confirmationModal .confirmation-modal');
+            const confirmBtn = document.getElementById('confirmActionBtn');
+            
+            // Reset previous type
+            modal.removeAttribute('data-type');
+            
+            // Set new type if specified
+            if (type !== 'default') {
+                modal.setAttribute('data-type', type);
+            }
+            
+            document.getElementById('confirmationTitle').textContent = title;
+            document.getElementById('confirmationMessage').textContent = message;
+            
+            // Clone and replace the confirm button to remove old event listeners
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            
+            newConfirmBtn.addEventListener('click', () => {
+                confirmationModal.hide();
+                onConfirm();
+            });
+            
+            confirmationModal.show();
+        }
+
+        // Update error handling to use error type
+        function showError(title, message) {
+            showConfirmation(title, message, () => {}, 'error');
+        }
+
+        // Update success handling to use success type
+        function showSuccess(title, message, onConfirm = () => {}) {
+            showConfirmation(title, message, onConfirm, 'success');
+        }
+
         // Delete Contact Buttons
         document.querySelectorAll('.delete-contact').forEach(button => {
             button.addEventListener('click', function() {
-                if (confirm('Are you sure you want to delete this contact?')) {
-                    console.log('Delete confirmed, making API request');
-                    // Get the resource name and remove the 'people/' prefix if it exists
-                    const resourceName = this.getAttribute('data-resource-name');
-                    const cleanResourceName = resourceName.replace('people/', '');
-                    console.log('Processing delete request:', {
-                        originalResourceName: resourceName,
-                        cleanResourceName: cleanResourceName
-                    });
-                    
-                    // Send the clean resource name to the API endpoint
-                    fetch(`/api/contacts/${cleanResourceName}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'Authorization': sessionStorage.getItem('access_token')
-                        }
-                    })
-                        .then(response => {
-                            console.log('Delete response:', { status: response.status, ok: response.ok });
-                            if (response.ok) {
-                                console.log('Contact deleted successfully');
-                                location.reload();
-                            } else {
-                                throw new Error(`Failed to delete contact: ${response.status}`);
+                const resourceName = this.getAttribute('data-resource-name');
+                const cleanResourceName = resourceName.replace('people/', '');
+                const contactName = this.closest('.card').querySelector('.contact-name').textContent;
+                
+                showConfirmation(
+                    'Delete Contact',
+                    `Are you sure you want to delete ${contactName}?`,
+                    () => {
+                        console.log('Delete confirmed, making API request');
+                        fetch(`/api/contacts/${cleanResourceName}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': sessionStorage.getItem('access_token')
                             }
                         })
-                        .catch(error => {
-                            console.error('Error deleting contact:', error);
-                            alert(`Failed to delete contact: ${error.message}`);
-                        });
-                } else {
-                    console.log('Delete cancelled by user');
-                }
+                            .then(response => {
+                                console.log('Delete response:', { status: response.status, ok: response.ok });
+                                if (response.ok) {
+                                    showSuccess('Success', 'Contact deleted successfully', () => location.reload());
+                                } else {
+                                    throw new Error(`Failed to delete contact: ${response.status}`);
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error deleting contact:', error);
+                                showError('Error', `Failed to delete contact: ${error.message}`);
+                            });
+                    }
+                );
             });
         });
 
         // Modified Save Contact
         document.getElementById('saveContact').addEventListener('click', function() {
-            // Validate all email fields
-            const emailInputs = document.querySelectorAll('.email-input');
-            let hasInvalidFormat = false;
-            
-            emailInputs.forEach(input => {
-                const isValid = validateEmail(input.value);
-                input.classList.toggle('is-valid', isValid);
-                input.classList.toggle('is-invalid', !isValid && input.value !== '');
-                if (!isValid && input.value !== '') {
-                    hasInvalidFormat = true;
-                }
-            });
-
-            if (hasInvalidFormat) {
-                if (!confirm('Some emails do not follow the suggested format. Do you want to save anyway?')) {
-                    return;
-                }
-            }
-
+            // Get form data
             const resourceName = document.getElementById('resourceName').value;
+            const emailInputs = document.querySelectorAll('.email-input');
             const emails = Array.from(emailInputs)
                 .map(input => input.value)
                 .filter(email => email.trim() !== ''); // Only include non-empty emails
-            const phoneNumbers = Array.from(document.querySelectorAll('.phone-input')).map(input => input.value);
-            
+            const phoneNumbers = Array.from(document.querySelectorAll('.phone-input'))
+                .map(input => input.value)
+                .filter(phone => phone.trim() !== ''); // Only include non-empty phones
+
             const newContact = {
                 firstName: document.getElementById('firstName').value,
                 lastName: document.getElementById('lastName').value.trim() || '', // Use empty string if lastName is empty
@@ -476,17 +520,12 @@
                     phoneNumbers: currentPhoneNumbers
                 };
 
-                console.log('Comparing contacts:', {
-                    current: currentContact,
-                    new: { displayName: fullName, emails: newContact.emails, phoneNumbers: newContact.phoneNumbers }
-                });
-
                 if (currentFullName === fullName &&
                     JSON.stringify(currentContact.emails.sort()) === JSON.stringify(newContact.emails.sort()) &&
                     JSON.stringify(currentContact.phoneNumbers.sort()) === JSON.stringify(newContact.phoneNumbers.sort())) {
-                    console.log('No changes detected, canceling update');
-                    alert('No changes detected.');
-                    contactModal.hide();
+                    showConfirmation('No Changes', 'No changes were made to the contact.', () => {
+                        contactModal.hide();
+                    });
                     return;
                 }
             }
@@ -507,6 +546,10 @@
                 newContact.resourceName = cleanResourceName;
             }
 
+            saveContactData(newContact, url, method);
+        });
+
+        function saveContactData(newContact, url, method) {
             console.log('Making API request:', {
                 url: url,
                 method: method,
@@ -532,8 +575,7 @@
                     console.log('Raw response:', responseText);
 
                     if (response.ok) {
-                        console.log('Contact saved successfully');
-                        location.reload();
+                        showSuccess('Success', 'Contact saved successfully', () => location.reload());
                     } else {
                         let errorMessage = `Status: ${response.status}`;
                         try {
@@ -547,9 +589,9 @@
                 })
                 .catch(error => {
                     console.error('Error saving contact:', error);
-                    alert(`Failed to save contact: ${error.message}`);
+                    showError('Error', `Failed to save contact: ${error.message}`);
                 });
-        });
+        }
 
         // Page initialization logging
         console.log('Page initialized. Checking for contacts...');
@@ -644,6 +686,21 @@
             const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
             document.documentElement.style.setProperty('--scrollbar-width', `${scrollbarWidth}px`);
         });
+
+        // Add this at the beginning of your script
+        function copyText(button) {
+            const text = button.previousElementSibling.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const icon = button.querySelector('i');
+                icon.className = 'fas fa-check';
+                button.classList.add('copied');
+                
+                setTimeout(() => {
+                    icon.className = 'fas fa-copy';
+                    button.classList.remove('copied');
+                }, 1500);
+            });
+        }
     </script>
 </body>
 </html> 
